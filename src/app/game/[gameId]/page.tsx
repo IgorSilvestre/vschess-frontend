@@ -47,7 +47,7 @@ export default async function GamePage({
           href="/"
           className="rounded-full border border-emerald-400 px-4 py-2 text-sm font-semibold text-emerald-300 transition-colors hover:bg-emerald-400/10"
         >
-          ← Sair para Home
+          ← Sair Home
         </Link>
         <div className="text-sm text-slate-400">Jogo #{gameId}</div>
       </header>

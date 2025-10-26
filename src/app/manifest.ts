@@ -36,9 +36,9 @@ export default function manifest(): MetadataRoute.Manifest {
     ],
     shortcuts: [
       {
-        name: "New vchess Match",
+        name: "Nova partida",
         url: "/",
-        description: "Start a fresh game against the engine.",
+        description: "Inicie uma nova partida contra o engine.",
       },
     ],
     prefer_related_applications: false,
