@@ -38,7 +38,7 @@ const PIECE_IMAGES: Record<
   bk: { src: "/pieces/classic/classic-black-king.png", alt: "Black king" },
 };
 
-const DEFAULT_STATUS = "Tap “Start a new game” to play as White.";
+const DEFAULT_STATUS = "Choose your side and tap “Start a new game”.";
 
 export function ChessGame({ apiUrl }: ChessGameProps) {
   const chessRef = useRef(new Chess());
@@ -59,6 +59,7 @@ export function ChessGame({ apiUrl }: ChessGameProps) {
     null,
   );
   const [history, setHistory] = useState<string[]>([]);
+  const [playerColor, setPlayerColor] = useState<"w" | "b">("w");
 
   const board = chess.board();
 
@@ -84,10 +85,11 @@ export function ChessGame({ apiUrl }: ChessGameProps) {
     setError(null);
 
     try {
+      const sidePayload = playerColor === "w" ? "white" : "black";
       const response = await fetch(`${normalizedApiUrl}/api/v1/games`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ side: "white" }),
+        body: JSON.stringify({ side: sidePayload }),
       });
 
       if (!response.ok) {
@@ -102,6 +104,10 @@ export function ChessGame({ apiUrl }: ChessGameProps) {
       setGameStatus(payload.status ?? "in_progress");
       setSelectedSquare(null);
       setAvailableTargets([]);
+
+      if (payload.move) {
+        applyEngineMove(payload.move);
+      }
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Failed to create a new game.",
@@ -176,7 +182,7 @@ export function ChessGame({ apiUrl }: ChessGameProps) {
     if (
       !gameId ||
       gameStatus !== "in_progress" ||
-      chess.turn() !== "w" ||
+      chess.turn() !== playerColor ||
       isSubmittingMove
     ) {
       return;
@@ -184,7 +190,7 @@ export function ChessGame({ apiUrl }: ChessGameProps) {
 
     const piece = chess.get(square);
 
-    if (piece && piece.color === "w") {
+    if (piece && piece.color === playerColor) {
       if (selectedSquare === square) {
         setSelectedSquare(null);
         setAvailableTargets([]);
@@ -216,12 +222,17 @@ export function ChessGame({ apiUrl }: ChessGameProps) {
     void sendMoveToServer(tentativeMove);
   };
 
-  const squares = board.flatMap((row, rowIndex) =>
-    row.map((square, columnIndex) => {
-      const rank = 8 - rowIndex;
-      const file = FILES[columnIndex];
+  const indices = Array.from({ length: 8 }, (_, idx) => idx);
+  const rowOrder = playerColor === "w" ? indices : [...indices].reverse();
+  const columnOrder = playerColor === "w" ? indices : [...indices].reverse();
+
+  const squares = rowOrder.flatMap((rowIdx, displayRowIndex) =>
+    columnOrder.map((colIdx, displayColumnIndex) => {
+      const rank = 8 - displayRowIndex;
+      const file = FILES[displayColumnIndex];
       const squareName = `${file}${rank}` as Square;
-      const isLight = (rowIndex + columnIndex) % 2 === 0;
+      const isLight = (displayRowIndex + displayColumnIndex) % 2 === 0;
+      const square = board[rowIdx][colIdx];
       const pieceKey = square ? `${square.color}${square.type}` : null;
       const pieceAsset = pieceKey ? PIECE_IMAGES[pieceKey] : null;
       const isHighlighted = availableTargets.includes(squareName);
@@ -284,6 +295,10 @@ export function ChessGame({ apiUrl }: ChessGameProps) {
     return pairs;
   }, [history]);
 
+  const sideLabel = playerColor === "w" ? "White" : "Black";
+  const isPlayerTurn =
+    chess.turn() === playerColor && gameStatus === "in_progress";
+
   return (
     <div className="min-h-screen bg-slate-950 py-10 text-slate-100">
       <div className="mx-auto flex max-w-6xl flex-col gap-12 px-6 lg:flex-row">
@@ -294,9 +309,46 @@ export function ChessGame({ apiUrl }: ChessGameProps) {
             </p>
             <h1 className="text-3xl font-semibold text-white">VS Chess</h1>
             <p className="text-sm text-slate-400">
-              You are white. Start a new game to let the engine respond as
-              black.
+              Choose your color, start a match, and play moves on the board.
             </p>
+          </div>
+
+          <div className="mt-4 flex flex-col gap-2">
+            <p className="text-xs uppercase tracking-[0.3em] text-slate-500">
+              Your Side
+            </p>
+            <div className="flex flex-wrap gap-3">
+              {(["w", "b"] as const).map((color) => {
+                const isActive = playerColor === color;
+                return (
+                  <button
+                    key={color}
+                    type="button"
+                    onClick={() => setPlayerColor(color)}
+                    disabled={isStarting}
+                    className={[
+                      "flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors",
+                      isActive
+                        ? "border-emerald-400 bg-emerald-400/10 text-emerald-200"
+                        : "border-slate-700 text-slate-300 hover:border-emerald-400/60 hover:text-emerald-200",
+                      isStarting ? "cursor-not-allowed opacity-60" : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
+                  >
+                    <span
+                      className={[
+                        "h-3 w-3 rounded-full border",
+                        color === "w"
+                          ? "border-slate-200 bg-slate-50"
+                          : "border-slate-900 bg-slate-900",
+                      ].join(" ")}
+                    />
+                    {color === "w" ? "White (moves first)" : "Black"}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           <div className="mt-6 flex flex-col gap-4 sm:flex-row">
@@ -332,7 +384,19 @@ export function ChessGame({ apiUrl }: ChessGameProps) {
               Game ID: {gameId ?? "—"}{" "}
               {normalizedApiUrl ? "" : "(API_URL missing)"}
             </p>
-            <p className="text-slate-300">Status: {gameStatus}</p>
+            <p className="text-slate-300">
+              Playing as:{" "}
+              <span className="font-semibold text-emerald-300">
+                {sideLabel}
+              </span>
+            </p>
+            <p className="text-slate-300">
+              {gameId
+                ? isPlayerTurn
+                  ? "Your move."
+                  : "Engine to move."
+                : DEFAULT_STATUS}
+            </p>
             {error && <p className="text-sm text-red-400">{error}</p>}
           </div>
         </section>
