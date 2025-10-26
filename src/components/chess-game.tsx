@@ -209,21 +209,21 @@ export function ChessGame({
     return pairs;
   }, [history]);
 
-  const sideLabel = playerColor === "w" ? "White" : "Black";
+  const sideLabel = playerColor === "w" ? "Brancas" : "Pretas";
   const isPlayerTurn =
     chess.turn() === playerColor && gameStatus === "in_progress";
   const statusLabel =
     gameStatus === "in_progress"
-      ? "In progress"
+      ? "Em progresso"
       : gameStatus.replaceAll("_", " ");
   const turnMessage =
     gameStatus === "in_progress"
       ? isSubmittingMove
-        ? "Engine is thinking…"
+        ? "Engine esta pensando…"
         : isPlayerTurn
-          ? "Your move."
-          : "Engine to move."
-      : "Game finished. Head back home to start a new battle.";
+          ? "Sua jogada."
+          : "Engine a jogar."
+      : "Jogo finalizado. Volte a home para uma nova partida.";
 
   return (
     <div className="flex h-full min-h-0 w-full flex-col bg-slate-950 text-slate-100">
