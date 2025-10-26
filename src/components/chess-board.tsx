@@ -75,14 +75,13 @@ export function ChessBoard({
         lastMove !== null &&
         (lastMove.from === squareName || lastMove.to === squareName);
 
-      const baseColor = isLight ? "bg-emerald-200" : "bg-emerald-700";
+      const baseColor = isLight
+        ? "rgb(236,235,201)"
+        : "rgb(96,140,67)";
       const highlightColor = isHighlighted ? "ring-4 ring-yellow-400" : "";
-      const selectedColor = isSelected
-        ? "outline outline-4 outline-blue-400"
-        : "";
-      const lastMoveColor = isLastMoveSquare
-        ? "bg-amber-200 text-slate-900"
-        : "";
+      const selectedColor = isSelected ? "shadow-[0_0_0_4px_rgba(59,130,246,1)]" : "";
+      const lastMoveColor = isLastMoveSquare ? "bg-amber-200 text-slate-900" : "";
+      const backgroundColor = lastMoveColor ? undefined : baseColor;
 
       return (
         <button
@@ -91,7 +90,6 @@ export function ChessBoard({
           onClick={() => onSquareClick(squareName)}
           className={[
             "flex aspect-square h-full w-full items-center justify-center text-3xl transition-all duration-150",
-            baseColor,
             highlightColor,
             selectedColor,
             lastMoveColor,
@@ -99,6 +97,7 @@ export function ChessBoard({
           ]
             .filter(Boolean)
             .join(" ")}
+          style={backgroundColor ? { backgroundColor } : undefined}
           disabled={disabled}
         >
           {pieceAsset ? (
@@ -121,8 +120,8 @@ export function ChessBoard({
 
   return (
     <div className="flex h-full w-full items-center justify-center min-h-0">
-      <div className="aspect-square h-full max-h-full w-full max-w-full rounded-2xl border border-slate-800 bg-slate-900/80 p-2 sm:p-4">
-        <div className="grid h-full w-full grid-cols-8 grid-rows-8 gap-0.5 rounded-xl bg-slate-900/40 p-1 sm:gap-1 sm:p-2">
+      <div className="aspect-square h-full max-h-full w-full max-w-full rounded-2xl bg-slate-900/80 p-2 sm:p-4">
+        <div className="grid h-full w-full grid-cols-8 grid-rows-8 overflow-hidden rounded-xl">
           {renderedSquares}
         </div>
       </div>
