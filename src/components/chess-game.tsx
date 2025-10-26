@@ -227,8 +227,8 @@ export function ChessGame({
 
   return (
     <div className="flex h-full min-h-0 w-full flex-col bg-slate-950 text-slate-100">
-      <div className="flex h-full min-h-0 w-full flex-1 flex-col gap-6 overflow-hidden px-4 py-4 lg:grid lg:grid-cols-[auto_minmax(320px,1fr)] lg:items-stretch lg:gap-8 lg:px-8 lg:py-6">
-        <section className="flex w-full min-h-0 flex-none items-center justify-center rounded-3xl border border-slate-800 bg-slate-900/70 p-3 shadow-2xl shadow-emerald-900/40 sm:p-5 lg:h-full">
+      <div className="flex h-full min-h-0 w-full flex-1 flex-col gap-4 overflow-hidden px-2 py-2 sm:gap-6 sm:px-4 sm:py-4 lg:grid lg:grid-cols-[auto_minmax(320px,1fr)] lg:items-stretch lg:gap-8 lg:px-8 lg:py-6">
+        <section className="flex w-full min-h-0 flex-[1.4] items-center justify-center -mx-2 rounded-none border-0 bg-transparent p-0 sm:mx-0 sm:flex-1 sm:rounded-3xl sm:border sm:border-slate-800 sm:bg-slate-900/70 sm:p-0 shadow-none sm:shadow-2xl sm:shadow-emerald-900/40 lg:p-5 lg:h-full">
           <ChessBoard
             boardState={board}
             perspective={playerColor}

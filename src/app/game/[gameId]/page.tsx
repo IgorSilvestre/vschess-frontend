@@ -51,14 +51,12 @@ export default async function GamePage({
         </Link>
         <div className="text-sm text-slate-400">Game #{gameId}</div>
       </header>
-      <div className="flex flex-1 min-h-0 overflow-hidden">
         <ChessGame
           apiUrl={apiUrl}
           gameId={gameId}
           playerColor={normalizedSide}
           initialEngineMove={resolvedSearchParams.initialMove ?? null}
         />
-      </div>
     </div>
   );
 }

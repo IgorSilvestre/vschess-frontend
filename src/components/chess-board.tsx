@@ -130,7 +130,7 @@ export function ChessBoard({
 
   return (
     <div className="flex h-full w-full items-center justify-center min-h-0">
-      <div className="aspect-square h-full max-h-full w-full max-w-full">
+      <div className="aspect-square h-full max-h-full w-full max-w-full rounded-2xl">
         <div className="grid h-full w-full grid-cols-8 grid-rows-8 overflow-hidden rounded-2xl">
           {renderedSquares}
         </div>
