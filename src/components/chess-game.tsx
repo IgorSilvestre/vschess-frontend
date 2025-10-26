@@ -3,7 +3,14 @@
 import type { Move, Square } from "chess.js";
 import { Chess } from "chess.js";
 import Image from "next/image";
-import { useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 type GameResponse = {
   gameId: string;
@@ -13,6 +20,9 @@ type GameResponse = {
 
 type ChessGameProps = {
   apiUrl?: string;
+  gameId: string;
+  playerColor: "w" | "b";
+  initialEngineMove?: string | null;
 };
 
 const FILES = ["a", "b", "c", "d", "e", "f", "g", "h"] as const;
@@ -38,20 +48,22 @@ const PIECE_IMAGES: Record<
   bk: { src: "/pieces/classic/classic-black-king.png", alt: "Black king" },
 };
 
-const DEFAULT_STATUS = "Choose your side and tap “Start a new game”.";
-
-export function ChessGame({ apiUrl }: ChessGameProps) {
+export function ChessGame({
+  apiUrl,
+  gameId,
+  playerColor,
+  initialEngineMove,
+}: ChessGameProps) {
   const chessRef = useRef(new Chess());
   const chess = chessRef.current;
+  const boardContainerRef = useRef<HTMLDivElement | null>(null);
 
   const normalizedApiUrl = (apiUrl ?? "").replace(/\/$/, "");
   const [, setFenKey] = useState(chess.fen());
-  const [gameId, setGameId] = useState<string | null>(null);
-  const [gameStatus, setGameStatus] = useState<string>(DEFAULT_STATUS);
+  const [gameStatus, setGameStatus] = useState<string>("in_progress");
   const [error, setError] = useState<string | null>(
     normalizedApiUrl ? null : "API_URL is not set.",
   );
-  const [isStarting, setIsStarting] = useState(false);
   const [isSubmittingMove, setIsSubmittingMove] = useState(false);
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
   const [availableTargets, setAvailableTargets] = useState<Square[]>([]);
@@ -59,11 +71,11 @@ export function ChessGame({ apiUrl }: ChessGameProps) {
     null,
   );
   const [history, setHistory] = useState<string[]>([]);
-  const [playerColor, setPlayerColor] = useState<"w" | "b">("w");
+  const [boardSize, setBoardSize] = useState(0);
 
   const board = chess.board();
 
-  const syncBoardState = () => {
+  const syncBoardState = useCallback(() => {
     setFenKey(chess.fen());
     const verboseHistory = chess.history({ verbose: true }) as Move[];
     if (verboseHistory.length === 0) {
@@ -73,70 +85,84 @@ export function ChessGame({ apiUrl }: ChessGameProps) {
       setLastMove({ from: latest.from as Square, to: latest.to as Square });
     }
     setHistory(chess.history());
-  };
-
-  const startNewGame = async () => {
-    if (!normalizedApiUrl) {
-      setError("API_URL is not configured. Add it to your .env file.");
-      return;
-    }
-
-    setIsStarting(true);
-    setError(null);
-
-    try {
-      const sidePayload = playerColor === "w" ? "white" : "black";
-      const response = await fetch(`${normalizedApiUrl}/api/v1/games`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ side: sidePayload }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Unable to start a new game. Is the API running?");
-      }
-
-      const payload: GameResponse = await response.json();
-
-      chess.reset();
-      syncBoardState();
-      setGameId(payload.gameId);
-      setGameStatus(payload.status ?? "in_progress");
-      setSelectedSquare(null);
-      setAvailableTargets([]);
-
-      if (payload.move) {
-        applyEngineMove(payload.move);
-      }
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to create a new game.",
-      );
-    } finally {
-      setIsStarting(false);
-    }
-  };
+  }, [chess]);
 
   const createMoveToken = (move: Move) =>
     `${move.from}${move.to}${move.promotion ?? ""}`;
+  useLayoutEffect(() => {
+    const container = boardContainerRef.current;
+    if (!container || typeof ResizeObserver === "undefined") {
+      return;
+    }
 
-  const applyEngineMove = (notation: string) => {
-    const from = notation.slice(0, 2) as Square;
-    const to = notation.slice(2, 4) as Square;
-    const promotion =
-      notation.length === 5
-        ? (notation[4] as "q" | "r" | "b" | "n")
-        : undefined;
+    const updateBoardSize = () => {
+      const rect = container.getBoundingClientRect();
+      setBoardSize(Math.min(rect.width, rect.height));
+    };
 
-    const engineMove = chess.move({ from, to, promotion });
+    updateBoardSize();
+    const resizeObserver = new ResizeObserver(updateBoardSize);
+    resizeObserver.observe(container);
 
-    if (!engineMove) {
-      setError("Failed to apply engine move. Please refresh the page.");
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
+
+  const applyEngineMove = useCallback(
+    (notation: string) => {
+      const from = notation.slice(0, 2) as Square;
+      const to = notation.slice(2, 4) as Square;
+      const promotion =
+        notation.length === 5
+          ? (notation[4] as "q" | "r" | "b" | "n")
+          : undefined;
+
+      const engineMove = chess.move({ from, to, promotion });
+
+      if (!engineMove) {
+        setError("Failed to apply engine move. Please refresh the page.");
+        return;
+      }
+
+      syncBoardState();
+    },
+    [chess, syncBoardState],
+  );
+
+  useEffect(() => {
+    chess.reset();
+    setSelectedSquare(null);
+    setAvailableTargets([]);
+    setLastMove(null);
+    setHistory([]);
+    setGameStatus("in_progress");
+
+    if (!gameId) {
+      setError("Game is not ready.");
+      return;
+    }
+
+    if (!normalizedApiUrl) {
+      setError("API_URL is not set.");
+      return;
+    }
+
+    if (playerColor === "b" && initialEngineMove) {
+      applyEngineMove(initialEngineMove);
       return;
     }
 
     syncBoardState();
-  };
+  }, [
+    chess,
+    gameId,
+    playerColor,
+    initialEngineMove,
+    normalizedApiUrl,
+    applyEngineMove,
+    syncBoardState,
+  ]);
 
   const sendMoveToServer = async (move: Move) => {
     if (!gameId || !normalizedApiUrl) {
@@ -301,139 +327,103 @@ export function ChessGame({ apiUrl }: ChessGameProps) {
   const sideLabel = playerColor === "w" ? "White" : "Black";
   const isPlayerTurn =
     chess.turn() === playerColor && gameStatus === "in_progress";
+  const statusLabel =
+    gameStatus === "in_progress"
+      ? "In progress"
+      : gameStatus.replaceAll("_", " ");
+  const turnMessage =
+    gameStatus === "in_progress"
+      ? isSubmittingMove
+        ? "Engine is thinking…"
+        : isPlayerTurn
+          ? "Your move."
+          : "Engine to move."
+      : "Game finished. Head back home to start a new battle.";
 
   return (
-    <div className="min-h-screen bg-slate-950 py-10 text-slate-100">
-      <div className="mx-auto flex max-w-6xl flex-col gap-12 px-6 lg:flex-row">
-        <section className="flex flex-1 flex-col rounded-3xl border border-slate-800 bg-slate-900/70 p-8 shadow-2xl shadow-emerald-900/40">
-          <div className="flex flex-col gap-2">
-            <p className="text-sm uppercase tracking-[0.3em] text-emerald-300">
-              Play
-            </p>
-            <h1 className="text-3xl font-semibold text-white">VS Chess</h1>
-            <p className="text-sm text-slate-400">
-              Choose your color, start a match, and play moves on the board.
-            </p>
-          </div>
-
-          <div className="mt-4 flex flex-col gap-2">
-            <p className="text-xs uppercase tracking-[0.3em] text-slate-500">
-              Your Side
-            </p>
-            <div className="flex flex-wrap gap-3">
-              {(["w", "b"] as const).map((color) => {
-                const isActive = playerColor === color;
-                return (
-                  <button
-                    key={color}
-                    type="button"
-                    onClick={() => setPlayerColor(color)}
-                    disabled={isStarting}
-                    className={[
-                      "flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors",
-                      isActive
-                        ? "border-emerald-400 bg-emerald-400/10 text-emerald-200"
-                        : "border-slate-700 text-slate-300 hover:border-emerald-400/60 hover:text-emerald-200",
-                      isStarting ? "cursor-not-allowed opacity-60" : "",
-                    ]
-                      .filter(Boolean)
-                      .join(" ")}
-                  >
-                    <span
-                      className={[
-                        "h-3 w-3 rounded-full border",
-                        color === "w"
-                          ? "border-slate-200 bg-slate-50"
-                          : "border-slate-900 bg-slate-900",
-                      ].join(" ")}
-                    />
-                    {color === "w" ? "White (moves first)" : "Black"}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="mt-6 flex flex-col gap-4 sm:flex-row">
-            <button
-              type="button"
-              onClick={startNewGame}
-              disabled={isStarting || !normalizedApiUrl}
-              className={[
-                "rounded-full px-6 py-3 text-sm font-semibold uppercase tracking-wide",
-                "bg-emerald-400 text-emerald-950 transition-colors",
-                "hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-60",
-              ]
-                .filter(Boolean)
-                .join(" ")}
+    <div className="flex h-full min-h-0 w-full flex-col bg-slate-950 text-slate-100">
+      <div className="flex h-full min-h-0 w-full flex-1 flex-col gap-6 overflow-hidden px-4 py-4 lg:grid lg:grid-cols-[auto_minmax(320px,1fr)] lg:items-stretch lg:gap-8 lg:px-8 lg:py-6">
+        <section className="flex w-full min-h-0 flex-none items-center justify-center rounded-3xl border border-slate-800 bg-slate-900/70 p-3 shadow-2xl shadow-emerald-900/40 sm:p-5 lg:h-full">
+          <div
+            ref={boardContainerRef}
+            className="flex h-full w-full items-center justify-center min-h-0"
+          >
+            <div
+              className="rounded-2xl border border-slate-800 bg-slate-900/80 p-2 sm:p-4"
+              style={
+                boardSize
+                  ? { width: boardSize, height: boardSize }
+                  : { width: "100%", aspectRatio: 1 }
+              }
             >
-              {isStarting ? "Starting..." : "Start a new game"}
-            </button>
-            {isSubmittingMove && (
-              <span className="rounded-full border border-slate-700 px-4 py-3 text-xs uppercase tracking-wide text-slate-300">
-                Waiting for engine...
-              </span>
-            )}
-          </div>
-
-          <div className="mt-6 aspect-square w-full max-w-full self-stretch rounded-2xl border border-slate-800 bg-slate-900/80 p-2 sm:max-w-[520px] sm:self-center sm:p-4">
-            <div className="grid h-full w-full grid-cols-8 grid-rows-8 gap-0.5 rounded-xl bg-slate-900/40 p-1 sm:gap-1 sm:p-2">
-              {squares}
+              <div className="grid h-full w-full grid-cols-8 grid-rows-8 gap-0.5 rounded-xl bg-slate-900/40 p-1 sm:gap-1 sm:p-2">
+                {squares}
+              </div>
             </div>
-          </div>
-
-          <div className="mt-6 space-y-2 text-sm">
-            <p className="font-mono text-emerald-300">
-              Game ID: {gameId ?? "—"}{" "}
-              {normalizedApiUrl ? "" : "(API_URL missing)"}
-            </p>
-            <p className="text-slate-300">
-              Playing as:{" "}
-              <span className="font-semibold text-emerald-300">
-                {sideLabel}
-              </span>
-            </p>
-            <p className="text-slate-300">
-              {gameId
-                ? isPlayerTurn
-                  ? "Your move."
-                  : "Engine to move."
-                : DEFAULT_STATUS}
-            </p>
-            {error && <p className="text-sm text-red-400">{error}</p>}
           </div>
         </section>
 
-        <section className="w-full max-w-md rounded-3xl border border-slate-800 bg-slate-900/50 p-8">
-          <h2 className="text-xl font-semibold text-white">Moves</h2>
-          <p className="text-sm text-slate-400">
-            Track both sides of the game in standard notation.
-          </p>
-          <div className="mt-6 max-h-[520px] overflow-y-auto rounded-2xl border border-slate-800 bg-slate-950/30 p-4">
-            {movePairs.length === 0 ? (
-              <p className="text-center text-sm text-slate-500">
-                No moves yet.
+        <section className="flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-3xl border border-slate-800 bg-slate-900/50 lg:min-h-[0]">
+          <div className="space-y-3 border-b border-slate-800 bg-slate-900/60 p-6 text-sm text-slate-300">
+            <p className="text-xs uppercase tracking-[0.5em] text-emerald-300">
+              Game #{gameId}
+            </p>
+            <h1 className="text-2xl font-semibold text-white">
+              {sideLabel} vs Engine
+            </h1>
+            <div className="grid gap-2">
+              <p>
+                Status:{" "}
+                <span className="font-semibold text-emerald-300">
+                  {statusLabel}
+                </span>
               </p>
-            ) : (
-              <ol className="space-y-2 text-sm">
-                {movePairs.map((entry) => (
-                  <li
-                    key={entry.moveNumber}
-                    className="flex items-center justify-between rounded-xl bg-slate-900/60 px-4 py-2"
-                  >
-                    <span className="font-semibold text-emerald-300">
-                      {entry.moveNumber}.
-                    </span>
-                    <span className="flex flex-1 justify-between gap-4 pl-4 font-mono text-slate-100">
-                      <span className="text-white">{entry.white}</span>
-                      <span className="text-slate-300">
-                        {entry.black ?? "…"}
+              <p>{turnMessage}</p>
+              {error && <p className="text-red-400">{error}</p>}
+              {!normalizedApiUrl && (
+                <p className="text-amber-300">
+                  API URL missing. Check your environment configuration.
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="flex flex-1 flex-col overflow-hidden p-6 min-h-0">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-white">Move list</h2>
+              <span className="text-xs uppercase tracking-[0.4em] text-emerald-300">
+                {sideLabel}
+              </span>
+            </div>
+            <p className="mt-1 text-sm text-slate-400">
+              All moves in standard notation.
+            </p>
+            <div className="mt-4 flex-1 overflow-y-auto rounded-2xl border border-slate-800 bg-slate-950/30 p-4">
+              {movePairs.length === 0 ? (
+                <p className="text-center text-sm text-slate-500">
+                  No moves yet.
+                </p>
+              ) : (
+                <ol className="space-y-2 text-sm">
+                  {movePairs.map((entry) => (
+                    <li
+                      key={entry.moveNumber}
+                      className="flex items-center justify-between rounded-xl bg-slate-900/60 px-4 py-2"
+                    >
+                      <span className="font-semibold text-emerald-300">
+                        {entry.moveNumber}.
                       </span>
-                    </span>
-                  </li>
-                ))}
-              </ol>
-            )}
+                      <span className="flex flex-1 justify-between gap-4 pl-4 font-mono text-slate-100">
+                        <span className="text-white">{entry.white}</span>
+                        <span className="text-slate-300">
+                          {entry.black ?? "…"}
+                        </span>
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </div>
           </div>
         </section>
       </div>
