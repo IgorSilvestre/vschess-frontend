@@ -244,7 +244,7 @@ export function ChessGame({
         <section className="flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-3xl border border-slate-800 bg-slate-900/50 lg:min-h-[0]">
           <div className="space-y-3 border-b border-slate-800 bg-slate-900/60 p-6 text-sm text-slate-300">
             <p className="text-xs uppercase tracking-[0.5em] text-emerald-300">
-              Game #{gameId}
+              Jogo #{gameId}
             </p>
             <h1 className="text-2xl font-semibold text-white">
               {sideLabel} vs Engine
@@ -260,7 +260,7 @@ export function ChessGame({
               {error && <p className="text-red-400">{error}</p>}
               {!normalizedApiUrl && (
                 <p className="text-amber-300">
-                  API URL missing. Check your environment configuration.
+                  URL da API esta faltando, cheque configurações
                 </p>
               )}
             </div>
@@ -268,18 +268,18 @@ export function ChessGame({
 
           <div className="flex flex-1 flex-col overflow-hidden p-6 min-h-0">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-white">Move list</h2>
+              <h2 className="text-xl font-semibold text-white">Lista Movimentos</h2>
               <span className="text-xs uppercase tracking-[0.4em] text-emerald-300">
                 {sideLabel}
               </span>
             </div>
             <p className="mt-1 text-sm text-slate-400">
-              All moves in standard notation.
+              Todos os movimentos
             </p>
             <div className="mt-4 flex-1 overflow-y-auto rounded-2xl border border-slate-800 bg-slate-950/30 p-4">
               {movePairs.length === 0 ? (
                 <p className="text-center text-sm text-slate-500">
-                  No moves yet.
+                  Nenhum movimento ainda.
                 </p>
               ) : (
                 <ol className="space-y-2 text-sm">

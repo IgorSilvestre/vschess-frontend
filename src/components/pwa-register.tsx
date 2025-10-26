@@ -12,7 +12,7 @@ export function PWARegister() {
       navigator.serviceWorker
         .register("/sw.js", { scope: "/" })
         .catch((err) => {
-          console.error("Failed to register service worker", err);
+          console.error("Falha em registrar worker de serviço", err);
         });
     }
   }, []);

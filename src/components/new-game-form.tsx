@@ -14,8 +14,8 @@ type NewGameFormProps = {
 };
 
 const SIDES = [
-  { label: "White", value: "white", description: "Moves first" },
-  { label: "Black", value: "black", description: "Moves second" },
+  { label: "Brancas", value: "white", description: "Move primeiro" },
+  { label: "Pretas", value: "black", description: "Move em segundo" },
 ] as const;
 
 export function NewGameForm({ apiUrl }: NewGameFormProps) {
@@ -48,7 +48,7 @@ export function NewGameForm({ apiUrl }: NewGameFormProps) {
       });
 
       if (!response.ok) {
-        throw new Error("Unable to start a game. Is the API running?");
+        throw new Error("Não foi possível iniciar um jogo. A API esta rodando?");
       }
 
       const payload: GameResponse = await response.json();
@@ -60,7 +60,7 @@ export function NewGameForm({ apiUrl }: NewGameFormProps) {
       router.push(`/game/${payload.gameId}?${params.toString()}`);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Failed to create a new game.",
+        err instanceof Error ? err.message : "Falha em criar um novo jogo.",
       );
     } finally {
       setIsStarting(false);
@@ -74,17 +74,16 @@ export function NewGameForm({ apiUrl }: NewGameFormProps) {
           Start
         </p>
         <h1 className="text-4xl font-semibold text-white">
-          Create a VS Chess match
+          Criar uma partida
         </h1>
         <p className="text-base text-slate-400">
-          Choose your preferred side and spin up a new game. We will redirect
-          you to the board once the match is ready.
+          Escolha seu lado e comece a jogar.
         </p>
       </div>
 
       <div className="space-y-3">
         <p className="text-xs uppercase tracking-[0.3em] text-slate-500">
-          Pick a side
+          Escolha um lado
         </p>
         <div className="flex flex-col gap-3 sm:flex-row">
           {SIDES.map((side) => {
