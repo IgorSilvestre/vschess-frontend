@@ -27,14 +27,14 @@ export default async function GamePage({
       <div className="flex h-screen max-h-screen flex-col items-center justify-center gap-4 bg-slate-950 px-4 text-center text-slate-100">
         <p className="text-lg font-semibold">Missing side selection</p>
         <p className="text-sm text-slate-400">
-          We could not determine whether you are playing as White or Black.
-          Start a new game from the home page.
+          Não foi possível determinar qual lado voce escolheu
+          Inicie um novo jogo da home.
         </p>
         <Link
           href="/"
           className="rounded-full bg-emerald-400 px-5 py-2 text-sm font-semibold text-emerald-950"
         >
-          Return home
+          Voltar Home
         </Link>
       </div>
     );
@@ -47,9 +47,9 @@ export default async function GamePage({
           href="/"
           className="rounded-full border border-emerald-400 px-4 py-2 text-sm font-semibold text-emerald-300 transition-colors hover:bg-emerald-400/10"
         >
-          ← Quit to Home
+          ← Sair para Home
         </Link>
-        <div className="text-sm text-slate-400">Game #{gameId}</div>
+        <div className="text-sm text-slate-400">Jogo #{gameId}</div>
       </header>
         <ChessGame
           apiUrl={apiUrl}
