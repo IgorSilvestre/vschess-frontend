@@ -102,7 +102,7 @@ export function ChessBoard({
           disabled={disabled}
         >
           {pieceAsset ? (
-            <div className="relative h-[75%] w-[75%] min-h-0 min-w-0">
+            <div className="relative h-[94%] w-[94%] min-h-0 min-w-0">
               <Image
                 src={pieceAsset.src}
                 alt={pieceAsset.alt}
