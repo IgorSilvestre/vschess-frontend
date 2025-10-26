@@ -222,9 +222,10 @@ export function ChessGame({ apiUrl }: ChessGameProps) {
     void sendMoveToServer(tentativeMove);
   };
 
+  const isWhitePerspective = playerColor === "w";
   const indices = Array.from({ length: 8 }, (_, idx) => idx);
-  const rowOrder = playerColor === "w" ? indices : [...indices].reverse();
-  const columnOrder = playerColor === "w" ? indices : [...indices].reverse();
+  const rowOrder = isWhitePerspective ? indices : [...indices].reverse();
+  const columnOrder = isWhitePerspective ? indices : [...indices].reverse();
 
   const squares = rowOrder.flatMap((rowIdx, displayRowIndex) =>
     columnOrder.map((colIdx, displayColumnIndex) => {
@@ -268,15 +269,17 @@ export function ChessGame({ apiUrl }: ChessGameProps) {
           disabled={!gameId || gameStatus !== "in_progress"}
         >
           {pieceAsset ? (
-            <Image
-              src={pieceAsset.src}
-              alt={pieceAsset.alt}
-              width={64}
-              height={64}
-              className="h-12 w-12 select-none"
-              draggable={false}
-              priority={pieceKey?.startsWith("w") ?? false}
-            />
+            <div className="relative h-[75%] w-[75%] min-h-0 min-w-0">
+              <Image
+                src={pieceAsset.src}
+                alt={pieceAsset.alt}
+                fill
+                sizes="(max-width: 640px) 9vw, (max-width: 1024px) 5vw, 64px"
+                className="select-none object-contain"
+                draggable={false}
+                priority={pieceKey?.startsWith("w") ?? false}
+              />
+            </div>
           ) : null}
         </button>
       );
@@ -373,8 +376,8 @@ export function ChessGame({ apiUrl }: ChessGameProps) {
             )}
           </div>
 
-          <div className="mt-6 aspect-square w-full max-w-[520px] self-center rounded-2xl border border-slate-800 bg-slate-900/80 p-4">
-            <div className="grid h-full w-full grid-cols-8 grid-rows-8 gap-1 rounded-xl bg-slate-900/40 p-2">
+          <div className="mt-6 aspect-square w-full max-w-full self-stretch rounded-2xl border border-slate-800 bg-slate-900/80 p-2 sm:max-w-[520px] sm:self-center sm:p-4">
+            <div className="grid h-full w-full grid-cols-8 grid-rows-8 gap-0.5 rounded-xl bg-slate-900/40 p-1 sm:gap-1 sm:p-2">
               {squares}
             </div>
           </div>
